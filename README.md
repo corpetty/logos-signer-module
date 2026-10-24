@@ -13,7 +13,8 @@ signatures have.
 cd rust-lib && cargo test --no-default-features
 ```
 
-It needs `../logos-signer-interface` on branch `feat/ed25519-family` beside this checkout, and
-`logos-rust-sdk-src`, a symlink to a logos-rust-sdk checkout, for the module build.
+The interface it implements, with the `ed25519` family, is vendored in `rust-lib/vendor/` (see its
+README) until that branch is published. `nix build .#lgx` builds the module on
+logos-module-builder `0.3.2`, the Basecamp 0.3.2 generation.
 
 Licensed under MIT or Apache-2.0.
