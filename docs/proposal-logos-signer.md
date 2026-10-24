@@ -50,6 +50,25 @@ signer half as the keystore:
 Its accounts carry the phrase's BIP-32 master fingerprint, so a keystore holding the same phrase
 names the same wallet.
 
+## Built so far (2026-10-24), as branches to read before deciding
+
+| Repo | Branch | What |
+|---|---|---|
+| corpetty/logos-signer-interface | `feat/ed25519-family` | §1 |
+| corpetty/logos-evm-keystore-module | `feat/ed25519-identity` | identity groups from the kept phrase (§4), and §2d's two operations |
+| corpetty/logos-signer-manager-module | `feat/ed25519-record` | §2a's `record` legs, §2d's `open` and `secret` legs, and `doctests/identity-e2e.sh` |
+
+The end-to-end script runs all three under a logoscore 0.3.1 daemon:
+- the keystore makes a room key from the phrase, matching this crate's reference derivation;
+- the manager shows a Muster authorship record field by field, refuses a wrong password, and
+  returns a signature that libsodium verifies;
+- inside an unlock granted without confirmation, it signs the next record unseen;
+- it opens a box libsodium sealed to the room key;
+- it derives the room's founding secret through an approval, matching this crate's value.
+
+Everything below is still a question for upstream. The branches are one possible answer to each,
+built so the answers can be judged against working code.
+
 ## 2. Asks that need the manager
 
 ### 2a. A `record` request kind
