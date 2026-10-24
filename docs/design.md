@@ -1,6 +1,10 @@
 # context_signer_module: design
 
-**Status:** draft, 2026-10-24.
+**Status:** reference implementation, 2026-10-24. **Ed25519 ships in `keystore_module`** (branch
+`feat/ed25519-identity`), so the phrase stays where it already is: one place, kept only if the
+person chooses. This module is where the derivation and the room identity were proven, and the
+keystore's tests are held to it. It is not meant to ship beside the keystore, since it would need
+the phrase imported a second time.
 **Requirements:** Muster's `docs/design/wallet-signer-spec.md` (corpetty/muster `c47cda4`), "the
 spec" below.
 **Built on:**

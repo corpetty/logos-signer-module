@@ -20,7 +20,7 @@ design questions that the manager would have to answer.
 
 ## 1. An `ed25519` family and scheme (built)
 
-Branch `feat/ed25519-family`, one commit on `03eece5`:
+Branch `feat/ed25519-family` on corpetty/logos-signer-interface, one commit (`3ebac51`) on `03eece5`:
 - **`Family::Ed25519`.** An account carries its 32-byte public key, hex, as `address`, with no
   `path` and no `xpub`. It signs with its own key, as an EVM account does.
 - **`Scheme::Ed25519`.** Ed25519 (RFC 8032) with the item's 32 bytes as the message.
@@ -39,8 +39,9 @@ All existing tests pass unchanged.
 **One cost.** A new `Family` variant breaks exhaustive matches downstream. The manager needs the
 same arms. `#[non_exhaustive]` would avoid that next time.
 
-**A signer that passes the suite with it:** `context_signer_module`. It has the same signer half
-as the keystore:
+**The keystore implements it** (branch `feat/ed25519-identity` on keystore `127d4ac`; see §4).
+A standalone signer, `context_signer_module`, also passes the suite with it. It has the same
+signer half as the keystore:
 - hashes only, every item checked before the vault opens;
 - a password per request, or `unlock {account, password, ttlMs?, count?}` / `lock` /
   `unlocked`;
@@ -136,18 +137,26 @@ terms, or stay outside the platform?
 - **FROST** (ChillDKG, then BIP-445 signing). Its rounds keep state between steps, and a nonce
   must be used once. That does not fit stateless hash items.
 
-## 4. Where should Ed25519 live?
+## 4. Ed25519 lives in `keystore_module`
 
-| | A separate signer (`context_signer_module`) | `keystore_module` |
-|---|---|---|
-| Recovery phrase | imported twice; the manager joins the wallets by fingerprint | kept once |
-| Unattended signing | needs 2c | already there |
-| Change upstream | interface §1, manager arms, 2a | interface §1, manager arms, 2a, plus keystore |
+A recovery phrase should be kept in as few places as possible. The keystore already holds it, so
+identity keys come from there rather than from a second signer that would need the phrase
+imported again. That also settles 2c for this family, since the keystore is already the signer the
+manager unlocks.
 
-We are happy to go either way. Our code is a crate with no runtime:
-- `record` (the strict decoder);
-- `derive` (hardened BIP-32 and SLIP-0010 by context; BIP-32 and SLIP-0010 vectors);
-- `identity` (Ed25519, X25519 and sealed boxes, checked against libsodium's own output);
-- `vault` (scrypt Web3 Secure Storage, as the keystore keeps keys).
+Branch `feat/ed25519-identity`, on keystore `127d4ac`:
+- **An identity group** keeps one SLIP-0010 node, `m/7432'/0'`, made from a typed or kept phrase
+  as a Bitcoin wallet is, and never the root.
+- **Each identity key** is `m/7432'/0'/c0'…c7'` for a purpose and a context (2b's derivation).
+  Adding one opens the node, never the phrase.
+- **Tier D methods:** `import_identity`, `derive_identity`.
+- **`logos.signer/1`:** each identity key is an `ed25519` account (id `kr_…`, the public key as
+  `address`, the phrase's fingerprint), signed by password or inside an unlock.
+- **A bug the family exposed, fixed:** every record naming a family was being read as a Bitcoin
+  wallet (`Group::is_bitcoin` / `is_identity`).
+- **Tests:** 223 unit tests (213 before), and the conformance suite now runs on an ed25519 account.
+  `.lgx` and `.lgx-portable` build, and under logoscore 0.3.1 `signer_info` lists `ed25519`.
+- **Docs:** `docs/specs.md` § Identity keys.
 
-So it can sit behind either.
+`context_signer_module` stays as the reference: the same derivation computed from the root, which
+the keystore's tests are held to, with libsodium-checked X25519 for 2d.

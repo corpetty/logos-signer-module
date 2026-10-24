@@ -732,6 +732,7 @@ dependencies = [
 [[package]]
 name = "logos-signer-interface"
 version = "0.1.0"
+source = "git+https://github.com/corpetty/logos-signer-interface?rev=3ebac518b4a62bab534be01e669790bfc73a488e#3ebac518b4a62bab534be01e669790bfc73a488e"
 dependencies = [
  "bip32",
  "bitcoin",

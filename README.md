@@ -13,8 +13,13 @@ signatures have.
 cd rust-lib && cargo test --no-default-features
 ```
 
-The interface it implements, with the `ed25519` family, is vendored in `rust-lib/vendor/` (see its
-README) until that branch is published. `nix build .#lgx` builds the module on
+It implements the interface with the `ed25519` family, pinned at
+[corpetty/logos-signer-interface `feat/ed25519-family`](https://github.com/corpetty/logos-signer-interface/tree/feat/ed25519-family).
+
+**Status: reference.** Ed25519 identity keys ship in `keystore_module` (branch
+`feat/ed25519-identity`), because the keystore already holds the recovery phrase and a second signer
+would need it imported again. This crate is where the derivation was proven, and the keystore's
+tests are held to it. `nix build .#lgx` builds the module on
 logos-module-builder `0.3.2`, the Basecamp 0.3.2 generation.
 
 Licensed under MIT or Apache-2.0.
