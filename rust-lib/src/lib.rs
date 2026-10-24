@@ -6,3 +6,9 @@
 
 pub mod record;
 pub mod derive;
+pub mod identity;
+pub mod vault;
+pub mod approval;
+pub mod grant;
+pub mod gate;
+pub mod signer;
