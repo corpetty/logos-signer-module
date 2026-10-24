@@ -1,8 +1,8 @@
 [package]
-name = "signer_module"
+name = "context_signer_module"
 version = "0.1.0"
 edition = "2021"
-description = "Logos signer module: context-derived keys, the room identity (Ed25519/X25519), standing grants, human-approved signing. No network."
+description = "Logos signer for the families no other signer holds: keys derived per (purpose, context) from one phrase, behind logos.signer/1. No network."
 license = "MIT OR Apache-2.0"
 # The builder's rustc (as keystore_module pins it), so the MSRV-aware resolver
 # picks dependency versions that compile there.
@@ -21,6 +21,7 @@ ed25519-dalek = { version = "2", features = ["zeroize"] }
 crypto_box = { version = "0.9", features = ["seal", "std"] }
 eth-keystore = "0.5"
 hmac = "0.12"
+ripemd = "0.1"
 sha2 = "0.10"
 rand = "0.8"
 serde = { version = "1", features = ["derive"] }
@@ -32,7 +33,13 @@ tempfile = "3"
 
 # Staged by logos-module-builder as a sibling crate; optional so the core
 # builds and tests with `cargo test --no-default-features`.
+# logos.signer/1, with the ed25519 family (branch feat/ed25519-family, proposed upstream).
+logos-signer-interface = { path = "../../logos-signer-interface" }
+
 logos-rust-sdk = { path = "../logos-rust-sdk-src", optional = true }
+
+[dev-dependencies]
+logos-signer-interface = { path = "../../logos-signer-interface", features = ["conformance"] }
 
 [features]
 default = ["logos_module"]

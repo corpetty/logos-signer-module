@@ -128,7 +128,7 @@ pub(crate) fn slip10_ed25519(seed: &[u8], path: &[u32]) -> Secret {
     let (mut k, mut c) = split(&hmac512(b"ed25519 seed", &[seed]));
     for &i in path {
         debug_assert!(i & HARDENED != 0);
-        let next = hmac512(c.as_ref(), &[&[0u8], k.as_ref(), &i.to_be_bytes()]);
+        let next = hmac512(&c[..], &[&[0u8], &k[..], &i.to_be_bytes()]);
         (k, c) = split(&next);
     }
     k
@@ -137,10 +137,10 @@ pub(crate) fn slip10_ed25519(seed: &[u8], path: &[u32]) -> Secret {
 /// BIP-32 for secp256k1: hardened steps only. Returns the 32-byte scalar.
 pub(crate) fn bip32_secp256k1(seed: &[u8], path: &[u32]) -> Result<Secret, DeriveError> {
     let (mut k, mut c) = split(&hmac512(b"Bitcoin seed", &[seed]));
-    k256::SecretKey::from_slice(k.as_ref()).map_err(|_| DeriveError::InvalidChild)?;
+    k256::SecretKey::from_slice(&k[..]).map_err(|_| DeriveError::InvalidChild)?;
     for &i in path {
         debug_assert!(i & HARDENED != 0);
-        let next = hmac512(c.as_ref(), &[&[0u8], k.as_ref(), &i.to_be_bytes()]);
+        let next = hmac512(&c[..], &[&[0u8], &k[..], &i.to_be_bytes()]);
         let (il, ci) = split(&next);
         let parent = scalar(&k)?;
         let tweak = scalar(&il)?;
@@ -175,7 +175,7 @@ pub fn derive(seed: &[u8], scheme: Scheme, purpose: &str, context: &str) -> Resu
 pub fn public_key(scheme: Scheme, secret: &Secret) -> Vec<u8> {
     match scheme {
         Scheme::Ed25519 => ed25519_dalek::SigningKey::from_bytes(secret).verifying_key().to_bytes().to_vec(),
-        Scheme::Secp256k1 => k256::SecretKey::from_slice(secret.as_ref())
+        Scheme::Secp256k1 => k256::SecretKey::from_slice(&secret[..])
             .expect("derived scalars are valid keys")
             .public_key()
             .to_encoded_point(true)
@@ -191,6 +191,16 @@ pub fn group_id(seed: &[u8]) -> Result<String, DeriveError> {
     let pk = public_key(Scheme::Secp256k1, &master);
     let d = Record::build("logos.signer.group.v1", vec![("root", Value::Bytes(pk))]).digest();
     Ok(format!("g_{}", hex::encode(&d[..16])))
+}
+
+/// The BIP-32 master fingerprint, 8 hex digits: `logos.signer/1` matches a wallet across signers
+/// by it, so a keystore and this module holding one phrase name the same wallet.
+pub fn master_fingerprint(seed: &[u8]) -> Result<String, DeriveError> {
+    use ripemd::{Digest as _, Ripemd160};
+    let master = bip32_secp256k1(seed, &[])?;
+    let pk = public_key(Scheme::Secp256k1, &master);
+    let h = Ripemd160::digest(sha2::Sha256::digest(&pk));
+    Ok(hex::encode(&h[..4]))
 }
 
 /// A key's opaque name. Stable across a restore, and it names no path.
@@ -223,24 +233,25 @@ mod tests {
     fn bip32_vector_1() {
         let seed = hex::decode(SEED1).unwrap();
         let m = bip32_secp256k1(&seed, &[]).unwrap();
-        assert_eq!(hex::encode(m.as_ref()), "e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35");
+        assert_eq!(hex::encode(&m[..]), "e8f32e723decf4051aefac8e2c93c9c5b214313817cdb01a1494b917c8436b35");
+        assert_eq!(master_fingerprint(&seed).unwrap(), "3442193e");
         let k = bip32_secp256k1(&seed, &[h(0)]).unwrap();
-        assert_eq!(hex::encode(k.as_ref()), "edb2e14f9ee77d26dd93b4ecede8d16ed408ce149b6cd80b0715a2d911a0afea");
+        assert_eq!(hex::encode(&k[..]), "edb2e14f9ee77d26dd93b4ecede8d16ed408ce149b6cd80b0715a2d911a0afea");
     }
 
     #[test]
     fn slip10_ed25519_vector_1() {
         let seed = hex::decode(SEED1).unwrap();
         let m = slip10_ed25519(&seed, &[]);
-        assert_eq!(hex::encode(m.as_ref()), "2b4be7f19ee27bbf30c667b642d5f4aa69fd169872f8fc3059c08ebae2eb19e7");
+        assert_eq!(hex::encode(&m[..]), "2b4be7f19ee27bbf30c667b642d5f4aa69fd169872f8fc3059c08ebae2eb19e7");
         let k = slip10_ed25519(&seed, &[h(0)]);
-        assert_eq!(hex::encode(k.as_ref()), "68e0fe46dfb67e368c75379acec591dad19df3cde26e63b93a8e704f1dade7a3");
+        assert_eq!(hex::encode(&k[..]), "68e0fe46dfb67e368c75379acec591dad19df3cde26e63b93a8e704f1dade7a3");
         assert_eq!(
             hex::encode(public_key(Scheme::Ed25519, &k)),
             "8c8a13df77a28f3445213a0f432fde644acaa215fc72dcdf300d5efaa85d350c"
         );
         let k = slip10_ed25519(&seed, &[h(0), h(1), h(2), h(2), h(1_000_000_000)]);
-        assert_eq!(hex::encode(k.as_ref()), "8f94d394a8e8fd6b1bc2f3f49f5c47e385281d5c17e65324b0f62483e37e8793");
+        assert_eq!(hex::encode(&k[..]), "8f94d394a8e8fd6b1bc2f3f49f5c47e385281d5c17e65324b0f62483e37e8793");
     }
 
     #[test]

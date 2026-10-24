@@ -54,7 +54,7 @@ impl RoomKey {
     /// libsodium's `crypto_sign_ed25519_sk_to_curve25519`: SHA-512 of the seed, clamped.
     fn x25519_secret(&self) -> Zeroizing<[u8; 32]> {
         let mut h = Zeroizing::new([0u8; 64]);
-        h.copy_from_slice(&Sha512::digest(self.seed.as_ref()));
+        h.copy_from_slice(&Sha512::digest(&self.seed[..]));
         let mut s = Zeroizing::new([0u8; 32]);
         s.copy_from_slice(&h[..32]);
         s[0] &= 248;
@@ -75,7 +75,7 @@ impl RoomKey {
     /// HMAC-SHA256 keyed by the seed over `info`: Muster's `derivedSecret`, one secret for one
     /// purpose. `info` is a record the caller domain-separated; the seed never leaves.
     pub fn derived_secret(&self, info: &[u8]) -> Zeroizing<[u8; 32]> {
-        let mut m = Hmac::<Sha256>::new_from_slice(self.seed.as_ref()).expect("any key length");
+        let mut m = Hmac::<Sha256>::new_from_slice(&self.seed[..]).expect("any key length");
         m.update(info);
         let mut out = Zeroizing::new([0u8; 32]);
         out.copy_from_slice(&m.finalize().into_bytes());

@@ -3,6 +3,7 @@
 //! ```text
 //! <dir>/groups/<group>.json   a Web3 Secure Storage (scrypt) vault holding the 64-byte BIP-39 seed
 //! <dir>/keys.json             keyRef → {scheme, purpose, context, publicKey, group}: no secret, no path
+//! <dir>/groups.json           group → BIP-32 master fingerprint: public
 //! ```
 //!
 //! The seed is decrypted only inside `with_seed`, and wiped when it returns. Every write goes
@@ -61,6 +62,11 @@ pub struct KeyEntry {
 }
 
 #[derive(Default, Serialize, Deserialize)]
+struct GroupIndex {
+    fingerprints: BTreeMap<String, String>,
+}
+
+#[derive(Default, Serialize, Deserialize)]
 struct Index {
     keys: BTreeMap<String, KeyEntry>,
 }
@@ -97,7 +103,8 @@ impl Vault {
     pub fn import(&self, phrase: &str, passphrase: Option<&str>, password: &str) -> Result<String> {
         let m = Mnemonic::<English>::new_from_phrase(phrase.trim()).map_err(|_| VaultError::Mnemonic)?;
         let seed = Zeroizing::new(m.to_seed(passphrase).map_err(|_| VaultError::Mnemonic)?);
-        let group = derive::group_id(seed.as_ref())?;
+        let group = derive::group_id(&seed[..])?;
+        let fingerprint = derive::master_fingerprint(&seed[..])?;
         if self.group_path(&group).exists() {
             return Err(VaultError::GroupExists);
         }
@@ -105,10 +112,26 @@ impl Vault {
         // eth-keystore writes in place, so it writes into a fresh directory beside the target
         // and the file is renamed in: the group either exists whole or not at all.
         let stage = tempfile::tempdir_in(self.groups_dir())?;
-        eth_keystore::encrypt_key(stage.path(), &mut rand::rngs::OsRng, seed.as_ref(), password, Some("v"))
+        eth_keystore::encrypt_key(stage.path(), &mut rand::rngs::OsRng, &seed[..], password, Some("v"))
             .map_err(|e| VaultError::Io(e.to_string()))?;
         fs::rename(stage.path().join("v"), self.group_path(&group))?;
+        let mut gi = self.read_groups()?;
+        gi.fingerprints.insert(group.clone(), fingerprint);
+        write_atomic(&self.dir.join("groups.json"), &serde_json::to_vec_pretty(&gi).expect("serializable"))?;
         Ok(group)
+    }
+
+    fn read_groups(&self) -> Result<GroupIndex> {
+        match fs::read(self.dir.join("groups.json")) {
+            Ok(b) => serde_json::from_slice(&b).map_err(|e| VaultError::Io(format!("groups.json: {e}"))),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(GroupIndex::default()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// A group's BIP-32 master fingerprint, recorded at import.
+    pub fn fingerprint(&self, group: &str) -> Result<Option<String>> {
+        Ok(self.read_groups()?.fingerprints.get(group).cloned())
     }
 
     pub fn groups(&self) -> Result<Vec<String>> {
@@ -209,6 +232,8 @@ mod tests {
         let v = Vault::new(d.path());
         let g = v.import(PHRASE, None, "pw").unwrap();
         assert_eq!(v.groups().unwrap(), vec![g.clone()]);
+        // The "abandon … about" phrase's master fingerprint, as BIP-32 wallets report it.
+        assert_eq!(v.fingerprint(&g).unwrap().as_deref(), Some("73c5da0a"));
         assert!(matches!(v.import(PHRASE, None, "other"), Err(VaultError::GroupExists)));
         // BIP-39's own vector for this phrase, empty passphrase.
         let seed = v.with_seed(&g, "pw", |s| Ok(hex::encode(s))).unwrap();

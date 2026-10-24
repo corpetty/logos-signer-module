@@ -7,3 +7,4 @@ pub mod record;
 pub mod derive;
 pub mod identity;
 pub mod vault;
+pub mod signer;
