@@ -1,8 +1,9 @@
-//! signer_module: keys for the schemes no other Logos module holds, signing only what a person
-//! approved or granted. No network. A secret never crosses the module boundary.
-//!
-//! The core below is plain Rust, tested with `cargo test --no-default-features`. The Logos glue
-//! is behind the default `logos_module` feature, as keystore_module arranges it.
+//! The crypto core Muster's missing signer families need: the record codec (Muster's CDE
+//! subset, strict), keys derived by (scheme, purpose, context) from one phrase (BIP-32,
+//! SLIP-0010, hardened only), and the room identity, byte for byte as libsodium does it.
+//! No Logos runtime: tested with `cargo test --no-default-features`.
 
 pub mod record;
 pub mod derive;
+pub mod identity;
+pub mod vault;
