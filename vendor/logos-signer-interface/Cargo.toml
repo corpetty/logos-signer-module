@@ -1,0 +1,40 @@
+[package]
+name = "logos-signer-interface"
+version = "0.1.0"
+edition = "2021"
+description = "logos.signer/1: the contract every Logos signer module implements, its checks, a mock signer and a conformance suite."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/logos-co/logos-signer-interface"
+# The module builder's rustc; resolver 3 keeps the lock within it.
+rust-version = "1.89"
+
+[workspace]
+resolver = "3"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+zeroize = "1"
+sha2 = "0.10"
+sha3 = "0.10"
+ed25519-dalek = "2"
+k256 = { version = "0.13", features = ["ecdsa", "schnorr", "arithmetic"] }
+bip32 = { version = "0.5", default-features = false, features = ["secp256k1", "std"] }
+# BIP39 seeds for the mock; bip32's own mnemonic type takes 24 words only.
+pbkdf2 = { version = "0.12", default-features = false, features = ["hmac"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+# The mock reads a whole PSBT the way a device does.
+bitcoin = { version = "0.32", optional = true, default-features = false, features = ["std", "base64"] }
+
+[features]
+default = []
+# MockSigner: software keys behind the interface, for tests here and in consumers.
+mock = ["dep:bitcoin"]
+# The suite every signer runs in its own CI.
+conformance = ["dep:bitcoin"]
+# For signers that hand a device a whole PSBT: input checks, internal keys, the signatures it added.
+psbt = ["dep:bitcoin"]
+
+[dev-dependencies]
+logos-signer-interface = { path = ".", features = ["mock", "conformance"] }

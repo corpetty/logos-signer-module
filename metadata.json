@@ -1,0 +1,21 @@
+{
+  "name": "context_signer_module",
+  "version": "0.1.0",
+  "description": "Signer for the families no other Logos signer holds: keys derived per purpose and context from one phrase, behind logos.signer/1. Today: ed25519 identity keys. No network.",
+  "author": "Corey Petty",
+  "type": "core",
+  "interface": "cdylib",
+  "category": "wallet",
+  "main": "context_signer_module_plugin",
+  "dependencies": [],
+  "include": [],
+  "capabilities": [],
+  "codegen": {
+    "rust": { "crate": "rust-lib", "trait": "ContextSignerModule", "source": "src/glue.rs" }
+  },
+  "nix": {
+    "external_libraries": [],
+    "packages": { "build": [], "runtime": [] },
+    "cmake": { "find_packages": [], "extra_include_dirs": [] }
+  }
+}

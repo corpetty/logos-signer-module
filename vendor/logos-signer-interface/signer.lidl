@@ -1,0 +1,13 @@
+module signer {
+  version "1.0.0"
+  description "logos.signer/1: list accounts and sign what the signer manager prepares. Payloads are JSON; see docs/interface.md"
+  method signer_info() -> tstr
+  method signer_accounts() -> tstr
+  method sign(request_json: tstr) -> tstr
+  method sign_status(job: tstr) -> tstr
+  method sign_result(job: tstr) -> tstr
+  method cancel_sign(job: tstr) -> tstr
+  event signer_accounts_changed(count: int)
+  event signer_changed(state: tstr)
+  event sign_progress(job: tstr, state: tstr)
+}

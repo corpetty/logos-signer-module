@@ -34,12 +34,12 @@ tempfile = "3"
 # Staged by logos-module-builder as a sibling crate; optional so the core
 # builds and tests with `cargo test --no-default-features`.
 # logos.signer/1, with the ed25519 family (branch feat/ed25519-family, proposed upstream).
-logos-signer-interface = { path = "../../logos-signer-interface" }
+logos-signer-interface = { path = "../vendor/logos-signer-interface" }
 
 logos-rust-sdk = { path = "../logos-rust-sdk-src", optional = true }
 
 [dev-dependencies]
-logos-signer-interface = { path = "../../logos-signer-interface", features = ["conformance"] }
+logos-signer-interface = { path = "../vendor/logos-signer-interface", features = ["conformance"] }
 
 [features]
 default = ["logos_module"]
